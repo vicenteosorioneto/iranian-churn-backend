@@ -1,0 +1,25 @@
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+.env
+.env.*
+.idea/
+.vscode/
+
+# Data and generated ML artifacts
+data/raw/*.csv
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+models/*.joblib
+reports/metrics.json
+reports/figures/*
+!models/.gitkeep
+!reports/figures/.gitkeep
