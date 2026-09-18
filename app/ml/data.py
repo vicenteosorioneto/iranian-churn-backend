@@ -7,6 +7,8 @@ from pandas.errors import EmptyDataError
 
 from app.ml.features import FEATURE_DOMAINS, REQUIRED_COLUMNS
 
+EXPECTED_MODELING_ROWS = 2_850
+
 
 def validate_dataset_columns(dataframe: pd.DataFrame) -> None:
     """Raise a clear error when any model input or target is absent."""
@@ -68,3 +70,19 @@ def load_dataset(path: Path) -> pd.DataFrame:
     dataframe = read_dataset(path)
     validate_dataset_columns(dataframe)
     return dataframe.loc[:, REQUIRED_COLUMNS].copy()
+
+
+def prepare_modeling_dataset(path: Path) -> pd.DataFrame:
+    """Return the modeling rows without changing or persisting the raw dataset."""
+    dataframe = load_dataset(path)
+    modeling_dataframe = dataframe.drop_duplicates(
+        subset=list(REQUIRED_COLUMNS), keep="first"
+    ).reset_index(drop=True)
+
+    if len(modeling_dataframe) != EXPECTED_MODELING_ROWS:
+        raise ValueError(
+            "Unexpected modeling dataset size after exact deduplication: "
+            f"expected {EXPECTED_MODELING_ROWS}, got {len(modeling_dataframe)}."
+        )
+
+    return modeling_dataframe
