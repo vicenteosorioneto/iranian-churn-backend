@@ -16,6 +16,7 @@ class PredictionRequest(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     model_name: ModelName = "random_forest"
+    threshold: float = Field(default=0.5, ge=0.0, le=1.0)
     call_failure: float = Field(alias="Call Failure")
     subscription_length: float = Field(alias="Subscription Length")
     seconds_of_use: float = Field(alias="Seconds of Use")
@@ -31,7 +32,7 @@ class PredictionRequest(BaseModel):
     age_group: int = Field(alias="Age Group")
 
     def feature_frame(self) -> pd.DataFrame:
-        values = self.model_dump(by_alias=True, exclude={"model_name"})
+        values = self.model_dump(by_alias=True, exclude={"model_name", "threshold"})
         return pd.DataFrame([values], columns=FEATURES)
 
 
@@ -39,3 +40,4 @@ class PredictionResponse(BaseModel):
     model_name: ModelName
     prediction: int
     churn_probability: float | None
+    decision_threshold: float = Field(ge=0.0, le=1.0)
