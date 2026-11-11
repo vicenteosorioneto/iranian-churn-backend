@@ -49,3 +49,19 @@ def test_examples_are_real_rows_without_target_in_features(monkeypatch) -> None:
     for row in data:
         assert set(row["features"]) == set(FEATURES)
         assert "Churn" not in row["features"]
+
+
+def test_prediction_rejects_invalid_dataset_domains() -> None:
+    invalid_cases = [
+        ("Complains", 2),
+        ("Tariff Plan", 3),
+        ("Status", 0),
+        ("Charge Amount", 11),
+        ("Age Group", 6),
+        ("Age", -5),
+    ]
+    for field, invalid in invalid_cases:
+        payload = _payload(0.5)
+        payload[field] = invalid
+        response = client.post("/api/predict", json=payload)
+        assert response.status_code == 422, (field, response.text)
