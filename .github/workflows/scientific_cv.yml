@@ -1,0 +1,27 @@
+name: Scientific grouped five-fold evaluation
+on:
+  push:
+    branches: [feat/five-fold-scientific-evaluation-20261111]
+  pull_request:
+  workflow_dispatch:
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements.txt
+      - name: Download UCI original data
+        run: curl --fail --location --retry 3 --output data/raw/iranian_churn.csv https://archive.ics.uci.edu/static/public/563/data.csv
+      - name: Run five stratified grouped folds
+        run: python -m app.ml.cross_validate > five_fold_metrics.json
+      - name: Print results
+        run: cat five_fold_metrics.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: five-fold-scientific-results
+          path: five_fold_metrics.json
+          retention-days: 90
