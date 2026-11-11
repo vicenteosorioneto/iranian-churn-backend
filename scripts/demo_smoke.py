@@ -27,6 +27,10 @@ def main() -> None:
     assert importance.status_code == 200, importance.text
     assert len(importance.json()["features"]) == len(FEATURES)
 
+    examples = client.get("/api/analytics/examples")
+    assert examples.status_code == 200, examples.text
+    assert {item["observed_churn"] for item in examples.json()} == {0, 1}
+
     record = dataframe.iloc[0]
     payload = {key: float(record[key]) for key in FEATURES}
     payload["model_name"] = "random_forest"
@@ -36,6 +40,12 @@ def main() -> None:
     assert result["prediction"] in [0, 1]
     assert result["model_name"] == "random_forest"
     assert 0.0 <= result["churn_probability"] <= 1.0
+
+    for threshold in (0.2, 0.8):
+        adjusted = client.post("/api/predict", json={**payload, "threshold": threshold})
+        assert adjusted.status_code == 200, adjusted.text
+        assert adjusted.json()["churn_probability"] == result["churn_probability"]
+        assert adjusted.json()["prediction"] == int(result["churn_probability"] >= threshold)
 
     print("Real-data demo checks passed.")
     print("Total records analyzed:", summary.json()["total_clients"])
