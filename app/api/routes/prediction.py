@@ -21,8 +21,14 @@ def create_prediction(request: PredictionRequest) -> PredictionResponse:
             detail=str(exc),
         ) from exc
 
+    # Threshold is an operational decision rule. It does not change
+    # the probability estimated by the fitted model.
+    if probability is not None:
+        prediction = int(probability >= request.threshold)
+
     return PredictionResponse(
         model_name=request.model_name,
         prediction=prediction,
         churn_probability=probability,
+        decision_threshold=request.threshold,
     )
