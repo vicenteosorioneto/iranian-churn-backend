@@ -4,6 +4,7 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from app.config import DATASET_PATH
 from app.ml.data import EXPECTED_MODELING_ROWS, prepare_modeling_dataset
@@ -34,6 +35,9 @@ def _synthetic_frame(rows: int = 30) -> pd.DataFrame:
     return pd.DataFrame(records, columns=REQUIRED_COLUMNS)
 
 
+@pytest.mark.skipif(
+    not DATASET_PATH.is_file(), reason="Requires the official Iranian Churn CSV"
+)
 def test_modeling_preparation_preserves_raw_file_and_removes_exact_duplicates() -> None:
     before = _file_digest(DATASET_PATH)
 
@@ -44,6 +48,9 @@ def test_modeling_preparation_preserves_raw_file_and_removes_exact_duplicates() 
     assert not dataframe.duplicated(subset=list(REQUIRED_COLUMNS)).any()
 
 
+@pytest.mark.skipif(
+    not DATASET_PATH.is_file(), reason="Requires the official Iranian Churn CSV"
+)
 def test_grouped_split_has_no_shared_feature_groups() -> None:
     dataframe = prepare_modeling_dataset(DATASET_PATH)
 

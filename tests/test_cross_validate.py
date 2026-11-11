@@ -1,10 +1,14 @@
 import pandas as pd
+import pytest
 
 from app.config import DATASET_PATH
 from app.ml.cross_validate import METRIC_NAMES, _summarize_metrics, iter_grouped_folds
 from app.ml.data import EXPECTED_MODELING_ROWS, prepare_modeling_dataset
 
 
+@pytest.mark.skipif(
+    not DATASET_PATH.is_file(), reason="Requires the official Iranian Churn CSV"
+)
 def test_every_cross_validation_fold_keeps_feature_groups_isolated() -> None:
     dataframe = prepare_modeling_dataset(DATASET_PATH)
     folds = list(iter_grouped_folds(dataframe))

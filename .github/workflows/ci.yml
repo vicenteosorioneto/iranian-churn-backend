@@ -1,0 +1,33 @@
+name: Backend checks
+on:
+  push:
+    branches: [main, fix/integracao-demo-churn-20261110]
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install --upgrade pip
+      - run: pip install -r requirements.txt
+      - run: pytest -q
+
+  real-data-demo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - name: Download official UCI dataset
+        run: curl --fail --location --retry 3 --output data/raw/iranian_churn.csv https://archive.ics.uci.edu/static/public/563/data.csv
+      - name: Inspect dataset
+        run: python -m app.ml.inspect_data
+      - name: Train models and persist real metrics
+        run: python -m app.ml.train
+      - name: Exercise API on real trained model
+        run: python -m scripts.demo_smoke

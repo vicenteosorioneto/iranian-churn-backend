@@ -3,8 +3,13 @@
 from typing import Any
 
 import joblib
+import json
+from sklearn.inspection import permutation_importance
+from sklearn.metrics import roc_curve
 
-from app.config import DATASET_PATH, METRICS_PATH, MODEL_PATHS, MODELS_DIR
+from app.config import (
+    DATASET_PATH, FEATURE_IMPORTANCE_PATH, METRICS_PATH, MODEL_PATHS, MODELS_DIR,
+)
 from app.ml.data import prepare_modeling_dataset
 from app.ml.evaluate import calculate_classification_metrics, save_metrics
 from app.ml.modeling import ModelingSplit, create_grouped_split
@@ -33,6 +38,10 @@ def fit_and_evaluate_models(
         metrics[name] = calculate_classification_metrics(
             split.y_test, predictions, probabilities
         )
+        fpr, tpr, _ = roc_curve(split.y_test, probabilities)
+        metrics[name]["roc_curve"] = [
+            {"fpr": float(x), "tpr": float(y)} for x, y in zip(fpr, tpr)
+        ]
 
     return metrics
 
@@ -56,6 +65,32 @@ def train_models() -> tuple[dict[str, dict[str, Any]], ModelingSplit]:
         joblib.dump(pipeline, MODEL_PATHS[name])
 
     save_metrics(metrics, METRICS_PATH)
+
+    # Measured permutation importance on the held-out test set. The fitted
+    # pipeline applies preprocessing, so the original feature names are retained.
+    importance = permutation_importance(
+        pipelines["random_forest"], split.x_test, split.y_test,
+        scoring="roc_auc", n_repeats=3, random_state=42, n_jobs=1,
+    )
+    features_report = [
+        {
+            "feature": str(feature),
+            "importance_mean": float(mean),
+            "importance_std": float(std),
+        }
+        for feature, mean, std in zip(
+            split.x_test.columns, importance.importances_mean, importance.importances_std
+        )
+    ]
+    features_report.sort(key=lambda item: item["importance_mean"], reverse=True)
+    FEATURE_IMPORTANCE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    FEATURE_IMPORTANCE_PATH.write_text(
+        json.dumps(
+            {"model_name": "random_forest", "scoring": "roc_auc", "features": features_report},
+            indent=2, ensure_ascii=False,
+        ) + "\n",
+        encoding="utf-8",
+    )
     return metrics, split
 
 

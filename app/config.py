@@ -7,6 +7,7 @@ DATASET_PATH = PROJECT_ROOT / "data" / "raw" / "iranian_churn.csv"
 MODELS_DIR = PROJECT_ROOT / "models"
 REPORTS_DIR = PROJECT_ROOT / "reports"
 METRICS_PATH = REPORTS_DIR / "metrics.json"
+FEATURE_IMPORTANCE_PATH = REPORTS_DIR / "feature_importance.json"
 
 MODEL_PATHS = {
     "logistic_regression": MODELS_DIR / "logistic_regression.joblib",

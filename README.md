@@ -13,7 +13,7 @@ Backend acadêmico para preparar a Iranian Churn Dataset, treinar e comparar mod
 - `reports`: métricas e futuras figuras.
 - `tests`: testes unitários e da API.
 
-O treinamento divide os dados uma única vez em 80% para treino e 20% para teste, com `random_state=42` e estratificação pelo target. Todo transformer é ajustado apenas por meio do `fit` do pipeline sobre o conjunto de treino, evitando vazamento de dados.
+O treinamento remove 300 duplicatas exatas (3.150 → 2.850 registros) e utiliza `StratifiedGroupKFold` com 5 partições (`random_state=42`), reservando uma para teste. Os grupos são definidos por atributos idênticos para evitar que combinações iguais de features apareçam simultaneamente em treino e teste. Todo transformer é ajustado apenas por meio do `fit` do pipeline sobre o conjunto de treino, evitando vazamento de dados.
 
 ## Atributos
 
@@ -39,8 +39,9 @@ aplicado SMOTE ou qualquer oversampling. Os estimadores aceitam a estratégia
 `class_weight="balanced"`, preservando o pipeline como ponto único de configuração.
 
 Também existem 300 linhas excedentes exatamente duplicadas e grupos de features
-idênticas com targets conflitantes. A inspeção relata esses casos, mas nenhuma linha
-é removida ou corrigida enquanto a decisão metodológica estiver pendente.
+idênticas com targets conflitantes. A inspeção relata esses casos; o treinamento remove
+somente duplicatas exatas, mas não apaga grupos com rótulos conflitantes. A separação
+por grupos mantém combinações idênticas de features fora de conjuntos distintos.
 
 Na Regressão Logística, valores numéricos ausentes recebem a mediana e os valores são padronizados com `StandardScaler`. No Random Forest, a imputação é igual, mas não há escala. Em ambos, atributos binários/categóricos usam imputação pela moda e `OneHotEncoder`; os ordinais usam imputação pela moda e mantêm sua representação ordenada. Cada estimador e seu pré-processamento formam um único `Pipeline`.
 
@@ -86,7 +87,8 @@ Esse comando gera:
 
 - `models/logistic_regression.joblib`;
 - `models/random_forest.joblib`;
-- `reports/metrics.json` com Accuracy, Precision, Recall, F1, ROC-AUC e matriz de confusão.
+- `reports/metrics.json` com Accuracy, Precision, Recall, F1, ROC-AUC, matriz de confusão e pontos da curva ROC;
+- `reports/feature_importance.json` com importância por permutação no conjunto de teste para o Random Forest.
 
 ## API
 
@@ -100,7 +102,9 @@ Rotas iniciais:
 
 - `GET /api/health` — disponibilidade da aplicação;
 - `GET /api/models/metrics` — métricas geradas pelo treinamento;
-- `POST /api/predict` — previsão com um pipeline treinado.
+- `POST /api/predict` — previsão com um pipeline treinado;
+- `GET /api/analytics/summary` — indicadores e distribuição observada de churn para dashboard;
+- `GET /api/models/feature-importance` — importância de variáveis medida no conjunto de teste.
 
 A documentação interativa fica em `http://127.0.0.1:8000/docs`. As rotas de métricas e previsão retornam erros explícitos enquanto os artefatos reais ainda não existirem.
 
@@ -130,3 +134,15 @@ tests/
 Dockerfile
 requirements.txt
 ```
+
+## Demonstração integrada com Next.js
+
+1. Obtenha a base original Iranian Churn na UCI, mantenha seu conteúdo e salve como `data/raw/iranian_churn.csv`.
+2. Instale dependências e execute `python -m app.ml.inspect_data`.
+3. Treine os dois modelos: `python -m app.ml.train`. Este comando produz os arquivos locais ignorados pelo Git, as métricas, curvas ROC e as importâncias por permutação.
+4. Execute `pytest` e depois `uvicorn app.main:app --reload`.
+5. Em outra janela, execute o frontend Next.js na porta 3000, com `NEXT_PUBLIC_API_URL=http://localhost:8000/api`.
+
+O navegador local está autorizado via CORS para `http://localhost:3000` e `http://127.0.0.1:3000`. Para outras origens, defina `CHURN_CORS_ORIGINS` como uma lista separada por vírgulas. Não use `*` em produção.
+
+Os dados exibidos são agregados dos registros únicos da base; nenhum gráfico, pontuação, matriz de confusão ou probabilidade é inventado. A predição precisa dos artefatos Joblib produzidos pelo treinamento. O serviço devolve erros explícitos quando os dados ou modelos estão ausentes.
