@@ -3,6 +3,7 @@
 from collections.abc import Iterator
 import json
 from typing import Any
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -132,7 +133,21 @@ def run_grouped_cross_validation(
 def main() -> None:
     dataframe = prepare_modeling_dataset(DATASET_PATH)
     results = run_grouped_cross_validation(dataframe)
-    print(json.dumps(results, indent=2, ensure_ascii=False))
+    output = Path("reports/cross_validation.json")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(json.dumps(results, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    print(f"Grouped five-fold CV saved to: {output}")
+    for model_name, model in results["models"].items():
+        for row in model["fold_metrics"]:
+            print("FOLD", model_name, row["fold"], "F1", round(row["f1"], 6),
+                  "ROC_AUC", round(row["roc_auc"], 6),
+                  "PRECISION", round(row["precision"], 6),
+                  "RECALL", round(row["recall"], 6))
+        for metric in METRIC_NAMES:
+            stats = model["summary"][metric]
+            print("SUMMARY", model_name, metric, "MEAN", round(stats["mean"], 6),
+                  "STD", round(stats["std"], 6), "MIN", round(stats["min"], 6),
+                  "MAX", round(stats["max"], 6))
 
 
 if __name__ == "__main__":
