@@ -1,0 +1,23 @@
+name: Gather KDMiLe LaTeX style files for manuscript compilation
+on:
+  push:
+    branches: [chore/build-kdmile-template-assets-20261112]
+  workflow_dispatch:
+jobs:
+  gather:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Retrieve published KDMiLe class and bibliography style
+        run: |
+          mkdir -p kdmile-template
+          curl --fail --location --retry 3 -o kdmile-template/kdmile.cls https://raw.githubusercontent.com/pischandler/uepg-garden-lowcost-iot-ml/main/paper/kdmile/kdmile.cls
+          curl --fail --location --retry 3 -o kdmile-template/kdmile.bst https://raw.githubusercontent.com/pischandler/uepg-garden-lowcost-iot-ml/main/paper/kdmile/kdmile.bst
+          test -s kdmile-template/kdmile.cls
+          test -s kdmile-template/kdmile.bst
+          head -n 6 kdmile-template/kdmile.cls
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kdmile-class-and-bst
+          path: kdmile-template/
+          retention-days: 7
