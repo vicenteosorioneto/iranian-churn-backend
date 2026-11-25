@@ -37,7 +37,7 @@ def test_threshold_must_be_between_zero_and_one() -> None:
 def test_examples_are_real_rows_without_target_in_features(monkeypatch) -> None:
     records = []
     for label in (0, 1):
-        row = {name: 3.0 for name in FEATURES}
+        row = {name: 3.0 + label for name in FEATURES}
         row.update({"Tariff Plan": 1, "Status": 1, "Age Group": 1, TARGET: label})
         records.append(row)
     dataframe = pd.DataFrame(records)
@@ -49,6 +49,27 @@ def test_examples_are_real_rows_without_target_in_features(monkeypatch) -> None:
     for row in data:
         assert set(row["features"]) == set(FEATURES)
         assert "Churn" not in row["features"]
+
+
+def test_examples_skip_rows_with_conflicting_labels(monkeypatch) -> None:
+    def make_row(value: float, label: int) -> dict:
+        row = {name: value for name in FEATURES}
+        row.update({"Tariff Plan": 1, "Status": 1, "Age Group": 1, TARGET: label})
+        return row
+
+    # The first churn row shares its features with a non-churn row, so the
+    # endpoint must skip it and return the unambiguous churn row instead.
+    dataframe = pd.DataFrame([
+        make_row(3.0, 1),
+        make_row(3.0, 0),
+        make_row(5.0, 0),
+        make_row(7.0, 1),
+    ])
+    monkeypatch.setattr(analytics, "prepare_modeling_dataset", lambda path: dataframe)
+    data = client.get("/api/analytics/examples").json()
+    by_label = {row["observed_churn"]: row["features"] for row in data}
+    assert by_label[0]["Age"] == 5.0
+    assert by_label[1]["Age"] == 7.0
 
 
 def test_prediction_rejects_invalid_dataset_domains() -> None:

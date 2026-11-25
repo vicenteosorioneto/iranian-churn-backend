@@ -82,9 +82,14 @@ def get_example_clients() -> list[ExampleClient]:
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Dataset is unavailable. Install the official Iranian Churn CSV.",
         ) from exc
+    # Skip rows whose feature combination also appears with the opposite label:
+    # those conflicting groups cannot be predicted consistently and would make
+    # a poor demonstration example.
+    labels_per_group = dataframe.groupby(list(FEATURES))[TARGET].transform("nunique")
+    unambiguous = dataframe.loc[labels_per_group == 1]
     examples = []
     for label, description in ((0, "Permaneceu"), (1, "Cancelou")):
-        matches = dataframe.loc[dataframe[TARGET] == label]
+        matches = unambiguous.loc[unambiguous[TARGET] == label]
         if matches.empty:
             continue
         row = matches.iloc[0]
