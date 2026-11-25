@@ -24,3 +24,5 @@ reports/feature_importance.json
 reports/figures/*
 !models/.gitkeep
 !reports/figures/.gitkeep
+
+reports/cross_validation.json

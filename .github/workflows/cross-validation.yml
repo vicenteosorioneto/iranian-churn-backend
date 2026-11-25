@@ -1,0 +1,27 @@
+name: Five-fold grouped validation
+on:
+  workflow_dispatch:
+  push:
+    branches: [feat/artigo-validacao-cruzada-20261111]
+  pull_request:
+    paths: [app/ml/cross_validate.py, .github/workflows/cross-validation.yml]
+jobs:
+  cross-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements.txt
+      - name: Download UCI Iranian Churn dataset
+        run: curl --fail --location --retry 3 --output data/raw/iranian_churn.csv https://archive.ics.uci.edu/static/public/563/data.csv
+      - name: Execute grouped 5-fold evaluation
+        run: python -m app.ml.cross_validate
+      - name: Save fold metrics
+        uses: actions/upload-artifact@v4
+        with:
+          name: iranian-churn-5-fold-metrics
+          path: reports/cross_validation.json
+          retention-days: 30
